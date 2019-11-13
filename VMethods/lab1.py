@@ -1,20 +1,22 @@
 from tkinter import *
 import random
-import fileinput
+import numpy as np
+from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
+import matplotlib.pyplot as plt
 
 SCREEN_WIDTH = "800"
 SCREEN_HEIGHT = "600"
 
-def thomasAlg(mat, f):
-    size = len(mat)
+def thomasAlg(a, b, c, f):
+    size = len(f)
     alpha = [0]
     beta = [0]
     x = [0] * size
     for i in range(size-1):
-        alpha.append(-mat[i][2]/(-mat[i][0]*alpha[i]+mat[i][1]))
-        beta.append((f[i]-mat[i][0]*beta[i])/(mat[i][0]*alpha[i]+mat[i][1]))
+        alpha.append(-b[i]/(-a[i]*alpha[i]+c[i]))
+        beta.append((f[i]-a[i]*beta[i])/(a[i]*alpha[i]+c[i]))
 
-    x[size-1] = (f[size-1]-mat[size-2][0]*beta[size-1])/(mat[size-2][1]+mat[size-2][0]*alpha[size-1])
+    x[size-1] = (f[size-1]-a[size-2]*beta[size-1])/(c[size-2]+a[size-2]*alpha[size-1])
     for i in reversed(range(size-1)):
         x[i] = alpha[i+1]*x[i+1] + beta[i+1]
     return x
@@ -23,34 +25,30 @@ def calculateSpline(p):
     n = len(p)
     a = [p[i-1][1] for i in range(1, n)]
     b = [0]*(n-1)
-    h = [ p[i][0]-p[i-1][0] for i in range(1, n)]
+    h = [p[i+1][0]-p[i][0] for i in range(n-1)]
     d = [0]*(n-1)
     f = [3*(p[i+1][1]-p[i][1])/h[i]-3*(p[i][1]-p[i-1][1])/h[i-1] for i in range(1, n-1)]
 
-    mtx = [[0]*3 for i in range(n-2)]
-    mtx[0] = [h[1], 2*(h[0]+h[1]), 0]
-    mtx[n-3] = [0, 2*(h[n-3]+h[n-2]), h[n-3]]
-    for i in range(1, n-3):
-        mtx[i] = [h[i+1], 2*(h[i]+h[i+1]), h[i]]
-
-    c = thomasAlg(mtx, f)
+    A = [h[i] for i in range(1, n-1)]
+    B = [h[i+1] for i in range(n-2)]
+    C = [2*(h[i]+h[i+1]) for i in range(n-2)]
+    c = thomasAlg(A, B, C, f)
     c.insert(0, 0)
     c.append(0)
-    for i in range(1, n):
-        b[i-1] = (p[i][1]-p[i-1][1])/h[i-1] - c[i-1]*h[i-1] - h[i-1] * ((c[i]-c[i-1])/3)
-        d[i-1] = (c[i] - c[i-1])/(3*h[i-1]) 
+    polynoms = [] * (n-1)
+    for i in range(n-1):
+        b[i] = (p[i+1][1]-a[i])/h[i] - c[i]*h[i] - h[i]*((c[i+1]-c[i])/3)
+        d[i] = (c[i+1] - c[i])/(3*h[i])
+        polynoms.append({"a":a[i], "b":b[i], "c":c[i], "d":d[i], "dist":(p[i][0], p[i+1][0])})
 
-    print("a: ", *a)
-    print("b: ", *b)
-    print("c: ", *c)
-    print("d: ", *d)
-    print("h: ", *h)
-    print("f: ", *f)
+    file = open("coeff.txt", "w")
+    for i in range(n-1):
+        file.write("a{0}={1}, b{0}={2}, c{0}={3}, d{0}={4}, range: {5}\n".format(i+1, 
+        round(polynoms[i]["a"], 3), round(polynoms[i]["b"], 3), round(polynoms[i]["c"], 3), 
+        round(polynoms[i]["d"], 3), polynoms[i]["dist"]))
+    file.close()
+    return polynoms
     
-
-
-
-
 def on_close(window):
     points.sort()
     pointsList.delete(0, END)
@@ -115,12 +113,25 @@ def on_button_click(instance):
         for elem in points:
             pointsList.insert(END, str(elem))
     elif instance['text'] == "Calculate Spline":
-        calculateSpline(points)    
+        polynoms = calculateSpline(points)
+        fig = plt.figure(figsize=(6, 5), dpi=100)
+        x = [np.arange(polynoms[i]["dist"][0], polynoms[i]["dist"][1], 0.01) for i in range(len(polynoms))]
+        for i in range(len(polynoms)):
+            fig.add_subplot(111).plot(x[i], polynoms[i]["a"] + polynoms[i]["b"]*(x[i]-points[i][0])
+            +polynoms[i]["c"]*((x[i]-points[i][0])**2) + polynoms[i]["d"]*((x[i]-points[i][0])**3))
+        canvas.figure = fig
+        canvas.draw()
+    elif instance['text'] == "Clear":
+        points.clear()
+        pointsList.delete(0, END)
 
 
 
 root = Tk()
 points = list()
+polynoms = dict()
+figure = plt.figure()
+canvas = FigureCanvasTkAgg(figure)
 
 #INITIALIZE WINDOW
 root.title("Spline Interpolation")
@@ -128,9 +139,11 @@ root.geometry(SCREEN_WIDTH+"x"+SCREEN_HEIGHT)
 root.resizable(False, False)
 
 #ADDING WIDGETS
+
 button1 = Button(text="Add points", height=1, font="roboto 11", command= lambda: on_button_click(button1))
 button2 = Button(text="Generate points", height=1, font="roboto 11", command=lambda: on_button_click(button2))
 button3 = Button(text="Calculate Spline", font="roboto 11", command=lambda: on_button_click(button3))
+button4 = Button(text="Clear", font="roboto 11", command=lambda: on_button_click(button4))
 label = Label(text="Points:", font="roboto 12")
 pointsList = Listbox(width=17, height=15)
 
@@ -138,6 +151,8 @@ pointsList = Listbox(width=17, height=15)
 button1.place(x=650, y=100)
 button2.place(x=650, y=50)
 button3.place(x=650, y=480)
+button4.place(x=650, y=520)
+canvas.get_tk_widget().place(x=10, y=50)
 label.place(x=650, y=150)
 pointsList.place(x=650, y=175)
 
