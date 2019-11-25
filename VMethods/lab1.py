@@ -1,7 +1,7 @@
 from tkinter import *
 import random
 import numpy as np
-from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
+from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg, NavigationToolbar2Tk
 import matplotlib.pyplot as plt
 
 SCREEN_WIDTH = "800"
@@ -113,12 +113,20 @@ def on_button_click(instance):
         for elem in points:
             pointsList.insert(END, str(elem))
     elif instance['text'] == "Calculate Spline":
-        polynoms = calculateSpline(points)
+        try:
+            polynoms = calculateSpline(points)
+        except Exception:
+            return
         fig = plt.figure(figsize=(6, 5), dpi=100)
+        plot = fig.add_subplot(111)
+        plt.axvline(0, color="black", linewidth=1, linestyle="dashed")
+        plt.axhline(0, color="black", linewidth=1, linestyle="dashed")
+        plot.plot(0, 0, color="black", marker=".")
         x = [np.arange(polynoms[i]["dist"][0], polynoms[i]["dist"][1], 0.01) for i in range(len(polynoms))]
         for i in range(len(polynoms)):
-            fig.add_subplot(111).plot(x[i], polynoms[i]["a"] + polynoms[i]["b"]*(x[i]-points[i][0])
+            plot.plot(x[i], polynoms[i]["a"] + polynoms[i]["b"]*(x[i]-points[i][0])
             +polynoms[i]["c"]*((x[i]-points[i][0])**2) + polynoms[i]["d"]*((x[i]-points[i][0])**3))
+
         canvas.figure = fig
         canvas.draw()
     elif instance['text'] == "Clear":
@@ -130,8 +138,10 @@ def on_button_click(instance):
 root = Tk()
 points = list()
 polynoms = dict()
-figure = plt.figure()
+figure = plt.figure(figsize=(6, 5), dpi=100)
 canvas = FigureCanvasTkAgg(figure)
+move = NavigationToolbar2Tk(canvas, root)
+move.place(x=10, y=10)
 
 #INITIALIZE WINDOW
 root.title("Spline Interpolation")
