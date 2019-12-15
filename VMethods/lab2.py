@@ -1,10 +1,22 @@
 import numpy as np
-import getch
 import os
+import platform
+if platform.system() == "Linux":
+    import getch as g
+elif platform.system() == "Windows":
+    import msvcrt as g
 import random
 import math
+import timeit
 
 EXIT_PROGRAM = 1
+
+clear = ""
+
+if platform.system() == "Linux":
+    clear = "clear"
+elif platform.system() == "Windows":
+    clear = "cls"
 
 def inputList(number, message):
     print(message)
@@ -121,7 +133,7 @@ def GetDet(a, y, j):
 
 def seidelMethod(A, b, eps=0.001):
     n = len(A)
-    x = np.array([.0 for i in range(n)])
+    x = np.array([0.0 for i in range(n)])
     converge = False
     for i in range(n):
         if A.A[i][i] == 0:
@@ -151,7 +163,7 @@ def check_symmetric(a, tol=1e-8):
 
 def relaxMethod(A, b, eps=0.001, omega=1.5):
     n = len(A)
-    x = np.array([.0 for i in range(n)])
+    x = np.array([0.0 for i in range(n)])
     converge = False
     if not converge:
         for i in range(n):
@@ -215,7 +227,7 @@ def simpleIterationMethod(mat, f):
 
 def LU(mat, f):
     if np.linalg.det(mat) == 0:
-        print("Матрица вырожденная, решение методом LU-разложение невозможно")
+        print("Матрица вырожденная, решение методом LU-разложения невозможно")
         return np.array([])
     A = np.matrix(mat.A.copy())
     n = len(A.A)
@@ -236,25 +248,38 @@ def LU(mat, f):
         x[i] = round(x[i], 3)
     return x
 
-def thomasAlg(a, b, c, d):
-    nf = len(d)  # number of equations
-    ac, bc, cc, dc = map(np.array, (a, b, c, d))  # copy arrays
-    for it in range(1, nf):
-        mc = ac[it-1]/bc[it-1]
-        bc[it] = bc[it] - mc*cc[it-1]
-        dc[it] = dc[it] - mc*dc[it-1]
-
-    xc = bc
-    xc[-1] = dc[-1]/bc[-1]
-
-    for il in range(nf-2, -1, -1):
-        xc[il] = (dc[il]-cc[il]*xc[il+1])/bc[il]
-
-    return xc
+def jacobiMethod(mat, b, N = 25, x=None):
+    if x is None:
+        x = np.zeros_like(b)
+    A = mat.A.copy()
+    if 0 in mat.diagonal().A[0]:
+        print("Главная диагональ с нулевыми элементами")
+        return np.array([])
+    diag = mat.diagonal().A.copy()[0]
+    A = mat.A.copy()
+    B = A.copy()
+    f = b.copy()
+    for i in range(n):
+        temp = diag[i]
+        f[i] /= temp
+        for j in range(n):
+            if i == j:
+                B[i][j] = 0
+            else:
+                B[i][j] /= temp
+    norm = np.linalg.norm(B, np.inf)
+    if norm >= 1:
+        print("Нет диагонального преобладания")
+        return np.array([])
+    D = np.diag(A)
+    R = A - np.diagflat(D)
+    for i in range(N):
+        x = (b - np.dot(R,x)) / D
+    return x
 
 if __name__ == "__main__":
     while EXIT_PROGRAM == 1:
-        os.system("clear")
+        os.system(clear)
         print("-----------------SOLVING SYSTEMS OF LINEAR EQUATIONS-----------------")
         print("1.Генерация СЛАУ")
         print("2.Метод Гаусса")
@@ -263,81 +288,152 @@ if __name__ == "__main__":
         print("5.Метод верхних релаксаций")
         print("6.Метод простых итераций")
         print("7.Метод LU-разложения")
-        print("8.Метод прогонки")
-        print("9.Выйти из программы")
-        key = getch.getch()
+        print("8.Метод Якоби")
+        print("9.Эксперимент")
+        print("0.Выйти из программы")
+        key = g.getch()
+        if platform.system() == "Windows":
+            key = key.decode('utf-8')
         if key == "1":
-            os.system("clear")
+            os.system(clear)
             print("-----------------SOLVING SYSTEMS OF LINEAR EQUATIONS-----------------")
             n = int(input("Введите размер матрицы:"))
-            print("1.Случайная генерация\n2.Ввод вручную")
-            key = getch.getch()
+            print("1.Случайная генерация\n2.Генерация симметричной матрицы\n3.Генерация матрицы с диагональным преобладанием\n4.Ввод вручную")
+            key = g.getch()
+            if platform.system() == "Windows":
+                key = key.decode('utf-8')
             if key == "1":
                 mat = np.matrix([[round(random.uniform(0, 100), 1) for i in range(n)] for j in range(n)])
                 b = np.array([round(random.uniform(0, 100), 1) for i in range(n)])
-            elif key == "2":
+            elif key == "4":
                 tmp = inputList(n * n, "Input A matrix: ")
                 mat = np.matrix([[tmp[i*n + j] for j in range(n)] for i in range(n)])
                 b = np.array(inputList(n, "Input b: "))
-            printMatrix(mat, b)
+            elif key == "2":
+                temp = [[0.0 for i in range(n)] for j in range(n)]
+                for i in range(n):
+                    for j in range(i, n):
+                        temp[i][j] = round(random.uniform(0, 100), 1)
+                        temp[j][i] = temp[i][j]
+                mat = np.matrix(temp)
+                b = np.array([round(random.uniform(0, 100), 1) for i in range(n)])
+            elif key == "3":
+                temp = [[0.0 for i in range(n)] for j in range(n)]
+                for i in range(n):
+                    for j in range(n):
+                        temp[i][j] = round(random.uniform(0, 100), 1)
+                    temp[i][i] = round(sum(temp[i])+1, 1)
+                mat = np.matrix(temp)
+                b = np.array([round(random.uniform(0, 100), 1) for i in range(n)])
+            if n <= 12:
+                printMatrix(mat, b)
+            else:
+                print("Матрица сгенерирована")
             print("Нажмите любую клавишу...")
-            getch.getch()
+            g.getch()
         elif key == "2":
-            os.system("clear")
+            os.system(clear)
             print("-----------------SOLVING SYSTEMS OF LINEAR EQUATIONS-----------------")
             printMatrix(mat, b)
+            t = timeit.default_timer()
             x = gaussMethod(mat, b.copy())
-            print(x)
+            t = timeit.default_timer() - t
+            print("x=", x)
+            print("Время работы:", t, "секунд")
             print("Нажмите любую клавишу...")
-            getch.getch()
+            g.getch()
         elif key == "3":
-            os.system("clear")
+            os.system(clear)
             print("-----------------SOLVING SYSTEMS OF LINEAR EQUATIONS-----------------")
             printMatrix(mat, b)
+            t = timeit.default_timer()
             x = kramerMethod(mat, b.copy())
-            print(x)
+            t = timeit.default_timer() - t
+            print("x=", x)
+            print("Время работы:", t, "секунд")
             print("Нажмите любую клавишу...")
-            getch.getch()
+            g.getch()
         elif key == "4":
-            os.system("clear")
+            os.system(clear)
             print("-----------------SOLVING SYSTEMS OF LINEAR EQUATIONS-----------------")
             printMatrix(mat, b)
+            t = timeit.default_timer()
             x = seidelMethod(mat, b.copy())
-            print(*x)
+            t = timeit.default_timer() - t
+            print("x=", *x)
+            print("Время работы:", t, "секунд")
             print("Нажмите любую клавишу...")
-            getch.getch()
+            g.getch()
         elif key == "5":
-            os.system("clear")
+            os.system(clear)
             print("-----------------SOLVING SYSTEMS OF LINEAR EQUATIONS-----------------")
             printMatrix(mat, b)
+            t = timeit.default_timer()
             x = relaxMethod(mat, b.copy())
-            print(*x)
+            t = timeit.default_timer() - t
+            print("x=", *x)
+            print("Время работы:", t, "секунд")
             print("Нажмите любую клавишу...")
-            getch.getch()
+            g.getch()
         elif key == "6":
-            os.system("clear")
+            os.system(clear)
             print("-----------------SOLVING SYSTEMS OF LINEAR EQUATIONS-----------------")
             printMatrix(mat, b)
+            t = timeit.default_timer()
             x = simpleIterationMethod(mat, b.copy())
-            print(*x)
+            t = timeit.default_timer() - t
+            print("x=", *x)
+            print("Время работы:", t, "секунд")
             print("Нажмите любую клавишу...")
-            getch.getch()
+            g.getch()
         elif key == "7":
-            os.system("clear")
+            os.system(clear)
             print("-----------------SOLVING SYSTEMS OF LINEAR EQUATIONS-----------------")
             printMatrix(mat, b)
+            t = timeit.default_timer()
             x = LU(mat, b)
-            print(*x)
+            t = timeit.default_timer() - t
+            print("x=", *x)
+            print("Время работы:", t, "секунд")
             print("Нажмите любую клавишу...")
-            getch.getch()
+            g.getch()
         elif key == "8":
-            os.system("clear")
+            os.system(clear)
             print("-----------------SOLVING SYSTEMS OF LINEAR EQUATIONS-----------------")
             printMatrix(mat, b)
-            x = thomasAlg(mat.A.diagonal(-1), mat.A.diagonal(0), mat.A.diagonal(1), b.copy())
-            print(x)
+            t = timeit.default_timer()
+            x = jacobiMethod(mat, b.copy())
+            t = timeit.default_timer() - t
+            print("x=", *x)
+            print("Время работы:", t, "секунд")
             print("Нажмите любую клавишу...")
-            getch.getch()
+            g.getch()
         elif key == "9":
+            os.system(clear)
+            print("-----------------SOLVING SYSTEMS OF LINEAR EQUATIONS-----------------")
+            t = timeit.default_timer()
+            x = gaussMethod(mat, b.copy())
+            print("Gauss:", timeit.default_timer()-t)
+            t = timeit.default_timer()
+            x = kramerMethod(mat, b.copy())
+            print("Kramer:", timeit.default_timer()-t)
+            t = timeit.default_timer()
+            x = seidelMethod(mat, b.copy())
+            print("Seidel:", timeit.default_timer()-t)
+            t = timeit.default_timer()
+            x = simpleIterationMethod(mat, b.copy())
+            print("Simple Iteration:", timeit.default_timer()-t)
+            t = timeit.default_timer()
+            x = relaxMethod(mat, b.copy())
+            print("Relax:", timeit.default_timer()-t)
+            t = timeit.default_timer()
+            x = LU(mat, b.copy())
+            print("LU:", timeit.default_timer()-t)
+            t = timeit.default_timer()
+            x = jacobiMethod(mat, b.copy())
+            print("Jacobi:", timeit.default_timer()-t)
+            print("Нажмите любую клавишу...")
+            g.getch()
+        elif key == "0":
             EXIT_PROGRAM = 0
         
