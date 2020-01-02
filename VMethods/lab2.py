@@ -154,8 +154,8 @@ def seidelMethod(A, b, eps=0.001):
         converge = math.sqrt(
             sum((x_new[i] - x[i]) ** 2 for i in range(n))) <= eps
         x = x_new
-    for i in x:
-        i = round(i, 3)
+    for i in range(n):
+        x[i] = round(x[i], 3)
     return x
 
 def check_symmetric(a, tol=1e-8):
@@ -185,8 +185,8 @@ def relaxMethod(A, b, eps=0.001, omega=1.5):
         converge = math.sqrt(
             sum((x_new[i] - x[i]) ** 2 for i in range(n))) <= eps
         x = x_new
-    for i in x:
-        i = round(i, 3)
+    for i in range(n):
+        x[i] = round(x[i], 3)
     return x
 
 def simpleIterationMethod(mat, f):
@@ -221,8 +221,8 @@ def simpleIterationMethod(mat, f):
                 norm = abs(xnew[i]-xold[i])
         if norm <= precision:
             break
-    for i in xnew:
-        i = round(i, 3)
+    for i in range(n):
+        xnew[i] = round(xnew[i], 3)
     return xnew
 
 def LU(mat, f):
@@ -275,6 +275,8 @@ def jacobiMethod(mat, b, N = 25, x=None):
     R = A - np.diagflat(D)
     for i in range(N):
         x = (b - np.dot(R,x)) / D
+    for i in range(n):
+        x[i] = round(x[i], 3)
     return x
 
 if __name__ == "__main__":
@@ -413,25 +415,25 @@ if __name__ == "__main__":
             print("-----------------SOLVING SYSTEMS OF LINEAR EQUATIONS-----------------")
             t = timeit.default_timer()
             x = gaussMethod(mat, b.copy())
-            print("Gauss:", timeit.default_timer()-t)
+            print("Gauss:", timeit.default_timer()-t, "секунд")
             t = timeit.default_timer()
             x = kramerMethod(mat, b.copy())
-            print("Kramer:", timeit.default_timer()-t)
+            print("Kramer:", timeit.default_timer()-t, "секунд")
             t = timeit.default_timer()
             x = seidelMethod(mat, b.copy())
-            print("Seidel:", timeit.default_timer()-t)
+            print("Seidel:", timeit.default_timer()-t, "секунд")
             t = timeit.default_timer()
             x = simpleIterationMethod(mat, b.copy())
-            print("Simple Iteration:", timeit.default_timer()-t)
+            print("Simple Iteration:", timeit.default_timer()-t, "секунд")
             t = timeit.default_timer()
             x = relaxMethod(mat, b.copy())
-            print("Relax:", timeit.default_timer()-t)
+            print("Relax:", timeit.default_timer()-t, "секунд")
             t = timeit.default_timer()
             x = LU(mat, b.copy())
-            print("LU:", timeit.default_timer()-t)
+            print("LU:", timeit.default_timer()-t, "секунд")
             t = timeit.default_timer()
             x = jacobiMethod(mat, b.copy())
-            print("Jacobi:", timeit.default_timer()-t)
+            print("Jacobi:", timeit.default_timer()-t, "секунд")
             print("Нажмите любую клавишу...")
             g.getch()
         elif key == "0":
